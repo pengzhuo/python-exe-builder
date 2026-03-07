@@ -1,3 +1,4 @@
+import sys
 import customtkinter as ctk
 from core.logic import start_process
 
@@ -50,9 +51,7 @@ class MainWindow:
         self.result.pack()
 
     def start_click(self):
-        price = self.price_input.get()
-        text = start_process(price)
-        self.result.configure(text=text)
+        sys.exit()
 
     def run(self):
         self.app.mainloop()
