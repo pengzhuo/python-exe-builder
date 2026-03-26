@@ -1,1 +1,6 @@
 customtkinter
+pyautogui
+pytesseract
+opencv-python
+numpy
+keyboard
