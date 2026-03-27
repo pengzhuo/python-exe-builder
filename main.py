@@ -1,10 +1,3 @@
-# from ui.main_window import MainWindow
-
-# if __name__ == "__main__":
-#     app = MainWindow()
-#     app.run()
-
-
 import pyautogui
 import pytesseract
 import cv2
@@ -19,8 +12,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, Listbox, EXTENDED
 
 # ================== 配置 ==================
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # 改成你的路径
-
 CONFIG_FILE = "config.json"
 BULLET_FILE = "bullets.txt"
 
@@ -30,6 +21,7 @@ if os.path.exists(CONFIG_FILE):
         CONFIG = json.load(f)
 else:
     CONFIG = {
+        "tesseract_cmd": r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         "price_region": [1520, 420, 300, 80],
         "name_region": [1100, 380, 400, 60],
         "item_positions": [[960, 480], [960, 580], [960, 680], [960, 780]],
@@ -38,6 +30,8 @@ else:
         "refresh_interval": 8,
         "auto_refresh": True
     }
+
+pytesseract.pytesseract.tesseract_cmd = CONFIG.get("tesseract_cmd", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 
 selected_bullets = []
 buy_amount = 10
