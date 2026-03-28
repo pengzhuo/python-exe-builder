@@ -7,6 +7,7 @@ import keyboard
 import re
 import json
 import os
+import logging
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, Listbox, EXTENDED
@@ -22,6 +23,7 @@ if os.path.exists(CONFIG_FILE):
 else:
     CONFIG = {
         "tesseract_cmd": r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        "resolution": [1920, 1080],
         "price_region": [1520, 420, 300, 80],
         "name_region": [1100, 380, 400, 60],
         "item_positions": [[960, 480], [960, 580], [960, 680], [960, 780]],
@@ -32,6 +34,28 @@ else:
     }
 
 pytesseract.pytesseract.tesseract_cmd = CONFIG.get("tesseract_cmd", r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+
+# ================== 日志 ==================
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+_log_file = os.path.join(LOG_DIR, f"sjz_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler(_log_file, encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("sjz")
+logger.info(f"日志文件：{_log_file}")
+
+# ================== 分辨率 ==================
+_res = CONFIG.get("resolution", [1920, 1080])
+SCREEN_W, SCREEN_H = int(_res[0]), int(_res[1])
+logger.info(f"目标分辨率：{SCREEN_W}x{SCREEN_H}")
 
 selected_bullets = []
 buy_amount = 10
@@ -71,8 +95,7 @@ def capture_text(region):
 
 def auto_buy():
     global running, last_refresh_time
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] 多子弹监控启动 | 选中 {len(selected_bullets)} 种 | 自动刷新: {CONFIG.get('auto_refresh', True)}")
-    start_time = time.time()
+    logger.info(f"多子弹监控启动 | 选中 {len(selected_bullets)} 种 | 自动刷新: {CONFIG.get('auto_refresh', True)}")
     scan_count = 0
     
     while running:
@@ -84,10 +107,10 @@ def auto_buy():
             try:
                 pyautogui.click(CONFIG["refresh_pos"][0], CONFIG["refresh_pos"][1])
                 last_refresh_time = time.time()
-                print("已自动刷新交易行")
+                logger.info("已自动刷新交易行")
                 time.sleep(0.6)
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"刷新失败：{e}")
         
         for pos in CONFIG["item_positions"]:
             pyautogui.click(pos[0], pos[1])
@@ -103,7 +126,7 @@ def auto_buy():
                 if bullet_name.lower() in name_text.lower():
                     cfg_price = bullet_dict.get(bullet_name, 999999)
                     if price and price <= cfg_price:
-                        print(f"🎯 发现低价！{bullet_name} 价格 {price} ≤ {cfg_price}，立即抢购...")
+                        logger.info(f"发现低价！{bullet_name} 价格 {price} ≤ {cfg_price}，立即抢购...")
                         pyautogui.click(CONFIG["buy_button_pos"][0], CONFIG["buy_button_pos"][1])
                         time.sleep(0.3)
                         for _ in range(buy_amount):
@@ -111,12 +134,12 @@ def auto_buy():
                         pyautogui.typewrite(str(buy_amount))
                         time.sleep(0.2)
                         pyautogui.press('enter')
-                        print(f"🚀 已下单 {buy_amount} 发 {bullet_name}！")
+                        logger.info(f"已下单 {buy_amount} 发 {bullet_name}！")
                         time.sleep(2.5)
-                        break  # 抢到后跳出本次循环
+                        break
             else:
                 continue
-            break  # 如果抢到就跳出物品循环
+            break
         
         scan_count += 1
         time.sleep(0.7)
@@ -128,6 +151,7 @@ def refresh_all():
         for name in bullet_dict.keys():
             listbox.insert(tk.END, name)
         status_label.config(text=f"已加载 {len(bullet_dict)} 种子弹")
+        logger.info(f"已加载 {len(bullet_dict)} 种子弹配置")
 
 def start_monitoring():
     global selected_bullets, buy_amount, running
@@ -144,6 +168,7 @@ def start_monitoring():
     selected_bullets = [listbox.get(i) for i in sel_indices]
     running = True
     status_label.config(text=f"运行中... 选中 {len(selected_bullets)} 种子弹")
+    logger.info(f"开始监控，选中子弹：{selected_bullets}，购买数量：{buy_amount}")
     start_btn.config(state="disabled")
     stop_btn.config(state="normal")
     
@@ -154,6 +179,7 @@ def stop_monitoring():
     global running
     running = False
     status_label.config(text="已停止")
+    logger.info("监控已停止")
     start_btn.config(state="normal")
     stop_btn.config(state="disabled")
 
@@ -186,7 +212,7 @@ stop_btn.pack()
 status_label = tk.Label(root, text="就绪 - 请编辑 bullets.txt 并点击刷新", font=("微软雅黑", 10), fg="blue")
 status_label.pack(pady=10)
 
-tk.Label(root, text="提示：\n1. 游戏窗口模式 1920x1080\n2. 把子弹加入收藏夹前几位\n3. 可编辑 config.json 调整坐标与刷新间隔", 
+tk.Label(root, text=f"提示：\n1. 游戏窗口模式 {SCREEN_W}x{SCREEN_H}（当前配置）\n2. 把子弹加入收藏夹前几位\n3. 可编辑 config.json 调整分辨率、坐标与刷新间隔", 
          font=("微软雅黑", 9), fg="gray", justify="left").pack(pady=10)
 
 # 初始加载
